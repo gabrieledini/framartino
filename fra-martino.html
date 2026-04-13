@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Le 7 Note — Fra Martino</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    background: #0a0a0f;
+    font-family: 'JetBrains Mono', monospace;
+    overflow-x: hidden;
+    padding: 1.5rem 0;
+  }
+
+  .container {
+    text-align: center;
+    padding: 1rem 1rem 2rem;
+    width: 100%;
+    max-width: 540px;
+  }
+
+  h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    color: #555;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 1.8rem;
+  }
+
+  /* ── Notes Grid ── */
+  .notes-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+  }
+  .note-col { display: flex; flex-direction: column; align-items: center; }
+  .note-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .note-btn {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 1.5px solid var(--c);
+    background: radial-gradient(circle at 40% 35%, #151520, #0a0a0f);
+    color: var(--c);
+    font-family: 'DM Serif Display', serif;
+    font-size: 1rem;
+    cursor: pointer;
+    position: relative; z-index: 2;
+    transition: all 0.25s ease;
+    box-shadow: 0 0 18px rgba(var(--cr), 0.06);
+  }
+  .note-btn:hover { box-shadow: 0 0 36px rgba(var(--cr), 0.18); transform: scale(1.08); }
+  .note-btn:active, .note-btn.playing {
+    box-shadow: 0 0 50px rgba(var(--cr), 0.32), inset 0 0 25px rgba(var(--cr), 0.07);
+    transform: scale(1.05);
+  }
+  .ring {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 1px solid var(--c);
+    pointer-events: none; opacity: 0; z-index: 1;
+  }
+  .note-wrap.playing .ring { animation: ripple .9s ease-out forwards; }
+  .note-wrap.playing .ring:nth-child(3) { animation-delay: .12s; }
+  .note-wrap.playing .ring:nth-child(4) { animation-delay: .24s; }
+  @keyframes ripple {
+    0%   { width: 64px; height: 64px; opacity: .5; }
+    100% { width: 160px; height: 160px; opacity: 0; }
+  }
+  .freq-label { margin-top: 5px; font-size: .5rem; font-weight: 300; color: #333; letter-spacing: .08em; }
+
+  .controls {
+    margin-top: 1.6rem;
+    display: flex; justify-content: center; gap: 10px; align-items: center;
+  }
+  select {
+    background: transparent; border: 1px solid #2a2a2a; color: #666;
+    padding: 4px 10px; font-family: 'JetBrains Mono', monospace;
+    font-size: .6rem; border-radius: 4px; cursor: pointer; outline: none;
+  }
+  select option { background: #111; }
+
+  /* ── Spartito ── */
+  .score-section {
+    margin-top: 2.2rem;
+    border-top: 1px solid #1a1a1a;
+    padding-top: 1.8rem;
+  }
+  .score-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: .95rem;
+    color: #555;
+    letter-spacing: .15em;
+    margin-bottom: 1.4rem;
+  }
+  .phrase-row {
+    margin-bottom: 1.2rem;
+  }
+  .lyric {
+    font-size: .58rem;
+    color: #444;
+    margin-bottom: 6px;
+    font-style: italic;
+    letter-spacing: .05em;
+  }
+  .phrase-notes {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .s-note {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Serif Display', serif;
+    font-size: .7rem;
+    cursor: pointer;
+    border: 1px solid var(--c);
+    color: var(--c);
+    background: transparent;
+    transition: all .2s ease;
+    opacity: 0.55;
+  }
+  .s-note:hover { opacity: 1; box-shadow: 0 0 16px rgba(var(--cr), .25); transform: scale(1.1); }
+  .s-note.active {
+    opacity: 1;
+    background: rgba(var(--cr), .12);
+    box-shadow: 0 0 22px rgba(var(--cr), .35);
+    transform: scale(1.15);
+  }
+  .phrase-sep {
+    width: 1px; height: 28px;
+    background: #222;
+    align-self: center;
+    margin: 0 4px;
+  }
+
+  .play-bar {
+    margin-top: 1.6rem;
+    display: flex; justify-content: center; gap: 12px; align-items: center;
+  }
+  .play-btn {
+    background: transparent;
+    border: 1px solid #e8aa3a;
+    color: #e8aa3a;
+    padding: 7px 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .65rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all .25s;
+    letter-spacing: .08em;
+  }
+  .play-btn:hover { background: rgba(232,170,58,.1); box-shadow: 0 0 20px rgba(232,170,58,.15); }
+  .play-btn:disabled { opacity: .3; cursor: default; }
+  .speed-label { font-size: .55rem; color: #444; }
+
+  [data-note="DO"]  { --c: #e85454; --cr: 232,84,84; }
+  [data-note="RE"]  { --c: #e8a33a; --cr: 232,163,58; }
+  [data-note="MI"]  { --c: #e8d44a; --cr: 232,212,74; }
+  [data-note="FA"]  { --c: #5ae87a; --cr: 90,232,122; }
+  [data-note="SOL"] { --c: #4ab8e8; --cr: 74,184,232; }
+  [data-note="LA"]  { --c: #7a6ae8; --cr: 122,106,232; }
+  [data-note="SI"]  { --c: #d46ae8; --cr: 212,106,232; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Le Sette Note</h1>
+  <div class="notes-grid" id="grid"></div>
+  <div class="controls">
+    <select id="octave">
+      <option value="3">Ottava 3</option>
+      <option value="4" selected>Ottava 4</option>
+      <option value="5">Ottava 5</option>
+    </select>
+    <select id="wave">
+      <option value="sine">Sine</option>
+      <option value="triangle">Triangle</option>
+      <option value="square">Square</option>
+      <option value="sawtooth">Sawtooth</option>
+    </select>
+  </div>
+
+  <!-- Spartito -->
+  <div class="score-section">
+    <div class="score-title">Fra Martino Campanaro</div>
+    <div id="score"></div>
+    <div class="play-bar">
+      <button class="play-btn" id="playAll">&#9654; Ascolta</button>
+      <select id="tempo">
+        <option value="400">Lento</option>
+        <option value="300" selected>Normale</option>
+        <option value="200">Veloce</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<script>
+  const noteData = [
+    { name: 'DO',  freq: { 3:130.81, 4:261.63, 5:523.25 } },
+    { name: 'RE',  freq: { 3:146.83, 4:293.66, 5:587.33 } },
+    { name: 'MI',  freq: { 3:164.81, 4:329.63, 5:659.26 } },
+    { name: 'FA',  freq: { 3:174.61, 4:349.23, 5:698.46 } },
+    { name: 'SOL', freq: { 3:196.00, 4:392.00, 5:783.99 } },
+    { name: 'LA',  freq: { 3:220.00, 4:440.00, 5:880.00 } },
+    { name: 'SI',  freq: { 3:246.94, 4:493.88, 5:987.77 } },
+  ];
+  const noteMap = {};
+  noteData.forEach(n => noteMap[n.name] = n);
+
+  // Fra Martino melody
+  const melody = [
+    { lyric: 'Fra Mar-ti-no',        notes: ['DO','RE','MI','DO'] },
+    { lyric: 'cam-pa-na-ro',         notes: ['DO','RE','MI','DO'] },
+    { lyric: 'dor-mi tu?',           notes: ['MI','FA','SOL'] },
+    { lyric: 'dor-mi tu?',           notes: ['MI','FA','SOL'] },
+    { lyric: 'suo-na le cam-pa-ne',  notes: ['SOL','LA','SOL','FA','MI','DO'] },
+    { lyric: 'suo-na le cam-pa-ne',  notes: ['SOL','LA','SOL','FA','MI','DO'] },
+    { lyric: 'din don dan',          notes: ['DO','SOL','DO'] },
+    { lyric: 'din don dan',          notes: ['DO','SOL','DO'] },
+  ];
+
+  const grid = document.getElementById('grid');
+  const scoreEl = document.getElementById('score');
+  const octSel = document.getElementById('octave');
+  const waveSel = document.getElementById('wave');
+  const tempoSel = document.getElementById('tempo');
+  const playAllBtn = document.getElementById('playAll');
+  let actx = null;
+  let playing = false;
+
+  function oct() { return octSel.value; }
+  function getFreq(name) { return noteMap[name].freq[oct()]; }
+
+  // ── Build top grid ──
+  function buildGrid() {
+    grid.innerHTML = '';
+    noteData.forEach((n, i) => {
+      const col = document.createElement('div');
+      col.className = 'note-col';
+      const wrap = document.createElement('div');
+      wrap.className = 'note-wrap';
+      wrap.dataset.note = n.name;
+      const btn = document.createElement('button');
+      btn.className = 'note-btn';
+      btn.dataset.note = n.name;
+      btn.textContent = n.name;
+      btn.addEventListener('click', () => playNote(n.name, wrap, btn));
+      wrap.appendChild(btn);
+      for (let r = 0; r < 3; r++) { const ring = document.createElement('div'); ring.className = 'ring'; wrap.appendChild(ring); }
+      const fl = document.createElement('div');
+      fl.className = 'freq-label'; fl.id = 'fl-' + i;
+      fl.textContent = n.freq[oct()].toFixed(1) + ' Hz';
+      col.appendChild(wrap); col.appendChild(fl);
+      grid.appendChild(col);
+    });
+  }
+
+  function updateLabels() {
+    noteData.forEach((n, i) => {
+      const el = document.getElementById('fl-' + i);
+      if (el) el.textContent = n.freq[oct()].toFixed(1) + ' Hz';
+    });
+  }
+  octSel.addEventListener('change', updateLabels);
+
+  // ── Build score ──
+  const allScoreNotes = [];
+  function buildScore() {
+    scoreEl.innerHTML = '';
+    allScoreNotes.length = 0;
+    melody.forEach((phrase) => {
+      const row = document.createElement('div');
+      row.className = 'phrase-row';
+      const lyric = document.createElement('div');
+      lyric.className = 'lyric';
+      lyric.textContent = phrase.lyric;
+      const notesDiv = document.createElement('div');
+      notesDiv.className = 'phrase-notes';
+      phrase.notes.forEach((n) => {
+        const el = document.createElement('button');
+        el.className = 's-note';
+        el.dataset.note = n;
+        el.textContent = n;
+        el.addEventListener('click', () => {
+          playNote(n);
+          el.classList.add('active');
+          setTimeout(() => el.classList.remove('active'), 500);
+        });
+        notesDiv.appendChild(el);
+        allScoreNotes.push({ el, name: n });
+      });
+      row.appendChild(lyric);
+      row.appendChild(notesDiv);
+      scoreEl.appendChild(row);
+    });
+  }
+
+  // ── Play sound ──
+  function playNote(name, wrap, btn, duration) {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    const freq = getFreq(name);
+    const dur = duration || 1.1;
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = waveSel.value;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.3, actx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    osc.connect(gain).connect(actx.destination);
+    osc.start(); osc.stop(actx.currentTime + dur);
+
+    if (wrap) {
+      wrap.classList.remove('playing'); void wrap.offsetWidth; wrap.classList.add('playing');
+      if (btn) btn.classList.add('playing');
+      setTimeout(() => { wrap.classList.remove('playing'); if (btn) btn.classList.remove('playing'); }, 800);
+    }
+
+    // highlight top grid note
+    const topWraps = document.querySelectorAll('.note-wrap');
+    const topBtns = document.querySelectorAll('.note-btn');
+    const idx = noteData.findIndex(nd => nd.name === name);
+    if (idx >= 0 && !wrap) {
+      const tw = topWraps[idx]; const tb = topBtns[idx];
+      tw.classList.remove('playing'); void tw.offsetWidth; tw.classList.add('playing');
+      tb.classList.add('playing');
+      setTimeout(() => { tw.classList.remove('playing'); tb.classList.remove('playing'); }, 600);
+    }
+  }
+
+  // ── Auto-play melody ──
+  playAllBtn.addEventListener('click', async () => {
+    if (playing) return;
+    playing = true;
+    playAllBtn.disabled = true;
+    playAllBtn.textContent = '♪ ...';
+
+    const tempo = parseInt(tempoSel.value);
+
+    for (let i = 0; i < allScoreNotes.length; i++) {
+      const { el, name } = allScoreNotes[i];
+      playNote(name, null, null, tempo / 1000 + 0.3);
+      el.classList.add('active');
+      await sleep(tempo);
+      el.classList.remove('active');
+      await sleep(60);
+    }
+
+    playing = false;
+    playAllBtn.disabled = false;
+    playAllBtn.textContent = '▶ Ascolta';
+  });
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // keyboard 1-7
+  document.addEventListener('keydown', e => {
+    const k = parseInt(e.key);
+    if (k >= 1 && k <= 7) {
+      const wraps = document.querySelectorAll('.note-wrap');
+      const btns = document.querySelectorAll('.note-btn');
+      playNote(noteData[k-1].name, wraps[k-1], btns[k-1]);
+    }
+  });
+
+  buildGrid();
+  buildScore();
+</script>
+</body>
+</html>
